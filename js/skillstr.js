@@ -1,4 +1,7 @@
-﻿var colorData = [
+﻿/**
+ * 技能描述
+ */
+var colorData = [
     { id: '0', color: 'ffffff' },
     { id: '1', color: 'ffcb4a' },
     { id: '2', color: 'b1ceff' },
