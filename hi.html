@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>武林外传技能模拟器</title>
+    <link rel="shortcut icon" href="1.ico" />
+
+    <script src="js/data.js"></script>
+    <script src="js/image.js"></script>
+    <script src="js/profrelationship.js"></script>
+    <script src="js/skillrecommend.js"></script>
+    <script src="js/skillrelationship.js"></script>
+    <script src="js/skillstr.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
+        }
+
+        .number {
+            font-style: italic;
+            margin-right: 10px;
+        }
+
+        #titleDiv {
+            text-align: center;
+        }
+
+        .needPointer {
+            cursor: pointer;
+        }
+
+        .profGroup {
+            float: left;
+            cursor: pointer;
+            margin: 2px 6px 0 6px;
+        }
+
+        .profGroup img {
+            border-radius: 4px;
+            margin: 2px;
+        }
+
+        .profTitle {
+            text-align: center;
+            padding-top: 5px
+        }
+
+        .profTitle span {
+            float: right;
+            font-style: italic;
+            padding-right: 10px
+        }
+
+        #menuDiv {
+            width: 300px;
+            position: absolute;
+            padding: 6px;
+            z-index: 66;
+            background-color: lightsteelblue;
+            border-radius: 6px;
+            margin-top: 200px;
+            margin-left: -8px;
+        }
+
+        #contentDiv {
+            position: absolute;
+        }
+
+        .profTree {
+            float: left;
+            border: 2px solid rebeccapurple;
+            border-radius: 6px;
+            margin: 8px;
+        }
+
+        .skillIcon {
+            position: absolute;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            z-index: 33;
+        }
+
+        .skillIcon span {
+            color: white;
+            font-weight: bold;
+            font-size: 24px;
+            text-align: right;
+            text-anchor: end;
+            margin-left: 0px;
+            margin-top: 0px;
+            width: 40px;
+            padding-top: 12px;
+            height: 28px;
+            -webkit-text-stroke: rgb(230, 99, 11) 2px;
+            position: absolute;
+        }
+
+        .skillIcon span:hover {
+            font-size: 30px;
+            font-weight: bolder;
+            text-align: center;
+            padding-top: 0px;
+            height: 40px;
+        }
+
+        #descDiv {
+            position: absolute;
+            display: none;
+            z-index: 88;
+            background-color: rgba(155, 111, 36, 0.9);
+            border-radius: 6px;
+            border: 1px orange solid;
+            padding: 6px;
+            color: white;
+            box-shadow: 3px 3px 6px #f2d908;
+        }
+    </style>
+
+    <script>
+        var maxLevel = 150
+        var usedSkillNumber = 0
+
+        var pngPrevStr = "data:image/png;base64,"
+
+        var currentProfs = ""
+
+        var lineStyle = "rgb(77,182,131)"
+        var strokeStyle = "orange"
+
+        function changeLevel(n) {
+            var levelSpan = document.querySelector("#levelSpan")
+            var leftSpan = document.querySelector("#leftSpan")
+            var levelNumber = parseInt(levelSpan.innerHTML)
+            var leftNumber = 0
+
+            levelNumber += n
+            if (levelNumber > maxLevel) {
+                levelNumber = maxLevel
+            } else if (levelNumber < 0) {
+                levelNumber = 0
+            }
+            levelSpan.innerHTML = levelNumber
+
+            var c = levelNumber - 130
+            if (c > 0) {
+                leftNumber = 130 + 20 + c * 2 - usedSkillNumber
+            } else {
+                leftNumber = levelNumber + 20 - usedSkillNumber
+            }
+            leftSpan.innerHTML = leftNumber
+        }
+
+        function changeCheckbox(id) {
+            var target = document.querySelector("#" + id)
+            target.checked = !target.checked
+        }
+
+        function createLine(fx, fy, tx, ty) {
+            fx = fx - 0, fy = fy - 0, tx = tx - 0, ty = ty - 0 //字符转数字
+            const canvas = document.createElement("canvas")
+            const ctx = canvas.getContext("2d")
+
+            if (Math.abs(fx - tx) < 3) {//好像剑有个技能上下不是对齐的; 在这种情况下，只能上从上到下的
+                canvas.width = 40
+                canvas.height = ty - fy - 40
+                canvas.dataset.left = fx
+                canvas.dataset.top = fy + 40
+                ctx.beginPath()
+                ctx.moveTo(17, 2)
+                ctx.lineTo(17, canvas.height - 2 - 6)
+                ctx.lineTo(14, canvas.height - 2 - 6)
+                ctx.lineTo(20, canvas.height - 2)
+                ctx.lineTo(26, canvas.height - 2 - 6)
+                ctx.lineTo(23, canvas.height - 2 - 6)
+                ctx.lineTo(23, 2)
+                ctx.closePath()
+                ctx.strokeStyle = strokeStyle
+                ctx.stroke()
+                ctx.fillStyle = lineStyle
+                ctx.fill()
+            } else if (Math.abs(fy - ty) < 3) { //左右
+                if (fx < tx) { // 从左到右
+                    canvas.width = tx - fx - 40
+                    canvas.height = 40
+                    canvas.dataset.left = fx + 40
+                    canvas.dataset.top = fy
+                    ctx.beginPath()
+                    ctx.moveTo(2, 17)
+                    ctx.lineTo(canvas.width - 2 - 6, 17)
+                    ctx.lineTo(canvas.width - 2 - 6, 14)
+                    ctx.lineTo(canvas.width - 2, 20)
+                    ctx.lineTo(canvas.width - 2 - 6, 26)
+                    ctx.lineTo(canvas.width - 2 - 6, 23)
+                    ctx.lineTo(2, 23)
+                    ctx.closePath()
+                    ctx.strokeStyle = strokeStyle
+                    ctx.stroke()
+                    ctx.fillStyle = lineStyle
+                    ctx.fill()
+                } else {
+                    canvas.width = fx - tx - 40
+                    canvas.height = 40
+                    canvas.dataset.left = tx + 40
+                    canvas.dataset.top = fy
+                    ctx.beginPath()
+                    ctx.moveTo(2 + 6, 17)
+                    ctx.lineTo(2 + 6, 14)
+                    ctx.lineTo(2, 20)
+                    ctx.lineTo(2 + 6, 26)
+                    ctx.lineTo(2 + 6, 23)
+                    ctx.lineTo(canvas.width - 2, 23)
+                    ctx.lineTo(canvas.width - 2, 17)
+                    ctx.closePath()
+                    ctx.strokeStyle = strokeStyle
+                    ctx.stroke()
+                    ctx.fillStyle = lineStyle
+                    ctx.fill()
+                }
+            } else if (fx < tx) { // 右下
+                canvas.width = tx - fx
+                canvas.height = ty - fy
+                canvas.dataset.left = fx + 40
+                canvas.dataset.top = fy
+                ctx.beginPath()
+                ctx.moveTo(2, 17)
+                ctx.lineTo(canvas.width - 17, 17)
+                ctx.lineTo(canvas.width - 17, canvas.height - 2 - 6)
+                ctx.lineTo(canvas.width - 14, canvas.height - 2 - 6)
+                ctx.lineTo(canvas.width - 20, canvas.height - 2)
+                ctx.lineTo(canvas.width - 26, canvas.height - 2 - 6)
+                ctx.lineTo(canvas.width - 23, canvas.height - 2 - 6)
+                ctx.lineTo(canvas.width - 23, 23)
+                ctx.lineTo(2, 23)
+                ctx.closePath()
+                ctx.strokeStyle = strokeStyle
+                ctx.stroke()
+                ctx.fillStyle = lineStyle
+                ctx.fill()
+            } else if (fx > tx) { // 左下
+                canvas.width = fx - tx
+                canvas.height = ty - fy
+                canvas.dataset.left = tx
+                canvas.dataset.top = fy
+                ctx.beginPath()
+                ctx.moveTo(17, 17)
+                ctx.lineTo(17, canvas.height - 2 - 6)
+                ctx.lineTo(14, canvas.height - 2 - 6)
+                ctx.lineTo(20, canvas.height - 2)
+                ctx.lineTo(26, canvas.height - 2 - 6)
+                ctx.lineTo(23, canvas.height - 2 - 6)
+                ctx.lineTo(23, 23)
+                ctx.lineTo(canvas.width - 2, 23)
+                ctx.lineTo(canvas.width - 2, 17)
+                ctx.closePath()
+                ctx.strokeStyle = strokeStyle
+                ctx.stroke()
+                ctx.fillStyle = lineStyle
+                ctx.fill()
+            }
+
+            const lineDiv = document.createElement("div")
+            lineDiv.style.width = canvas.width + "px"
+            lineDiv.style.height = canvas.height + "px"
+            lineDiv.style.marginLeft = canvas.dataset.left + "px"
+            lineDiv.style.marginTop = canvas.dataset.top + "px"
+            lineDiv.style.position = "absolute"
+            lineDiv.style.backgroundImage = "url(" + canvas.toDataURL() + ")"
+            return lineDiv;
+        }
+
+        var menuDivIsMoving = false
+        function showMenuDiv() {
+            if (menuDivIsMoving) {
+                return
+            }
+            var menuDiv = document.querySelector("#menuDiv")
+            if (menuDiv.offsetLeft == 0) {
+                return
+            }
+            var p = 310 / 20
+            menuDivIsMoving = true
+            var val = setInterval(function () {
+                if (menuDiv.offsetLeft > 0) {
+                    clearInterval(val)
+                    menuDivIsMoving = false
+                    menuDiv.style.marginLeft = "-8px"
+                } else {
+                    menuDiv.style.marginLeft = (menuDiv.offsetLeft + p) + "px"
+                }
+            }, 20)
+        }
+
+        function hideMenuDiv() {
+            if (menuDivIsMoving) {
+                return
+            }
+            var contentDiv = document.querySelector("#contentDiv")
+            if (contentDiv.innerHTML == "") {
+                return
+            }
+
+            var menuDiv = document.querySelector("#menuDiv")
+            var p = -308 / 25
+            menuDivIsMoving = true
+            var val = setInterval(function () {
+                if (menuDiv.offsetLeft < -300) {
+                    clearInterval(val)
+                    menuDivIsMoving = false
+                    menuDiv.style.marginLeft = "-310px"
+                } else {
+                    menuDiv.style.marginLeft = (menuDiv.offsetLeft + p) + "px"
+                }
+            }, 3)
+        }
+
+        function skillSort(prof) {
+            var skillDivs = prof.querySelectorAll(".skillIcon")
+            var tempArray = []
+            for (let m = 0; m < skillDivs.length; m++) {
+                const skiDiv = skillDivs[m];
+                if (tempArray.indexOf(skiDiv) != -1) {
+                    continue
+                }
+
+                //先排序 高级技能放前面
+                tempArray.push(skiDiv)
+                let targetSkiDiv = skiDiv
+                while (targetSkiDiv.dataset.prev != "undefined") {
+                    for (let x = 0; x < skillDivs.length; x++) {
+                        const tempSkiDiv = skillDivs[x];
+                        if (tempSkiDiv.dataset.name == targetSkiDiv.dataset.prev) {
+                            if (tempArray.indexOf(tempSkiDiv) == -1) {
+                                tempArray.splice(tempArray.indexOf(targetSkiDiv) + 1, 0, tempSkiDiv)
+                            }
+                            targetSkiDiv = tempSkiDiv
+                            break
+                        }
+                    }
+                }
+
+                let tempTargetArray = [targetSkiDiv]
+                while (tempTargetArray.length != 0) {
+                    let tta = []
+                    for (let x = 0; x < tempTargetArray.length; x++) {
+                        const tempTarget = tempTargetArray[x];
+                        for (let y = 0; y < skillDivs.length; y++) {
+                            const tempSkiDiv = skillDivs[y];
+                            if (tempTarget.dataset.name == tempSkiDiv.dataset.prev) {
+                                if (tempArray.indexOf(tempSkiDiv) == -1) {
+                                    tempArray.splice(tempArray.indexOf(tempTarget), 0, tempSkiDiv)
+                                }
+                                tta.push(tempSkiDiv)
+                            }
+                        }
+                    }
+                    tempTargetArray = tta
+                }
+            }
+            return tempArray
+        }
+
+        function plusCalculate() {
+            var proftreedivs = document.querySelectorAll(".profTree")
+
+            //本职业内的先搞定
+            for (let i = 0; i < proftreedivs.length; i++) {
+                const prof = proftreedivs[i];
+                var skillDivs = prof.querySelectorAll(".skillIcon")
+                let tempArray = skillSort(prof)
+
+                //因为高级技能在前面，所以一个技能只管prev就行了，循环会自动找到存在后面的prev，然后根据prev再设置前提职业
+                for (let m = 0; m < tempArray.length; m++) {
+                    const skiDiv = tempArray[m];
+                    if (parseInt(skiDiv.dataset.level) > 0) {
+                        if (skiDiv.dataset.prev != "undefined") {
+                            const prevMin = parseInt(skiDiv.dataset.prevMin)
+                            for (let j = m + 1; j < tempArray.length; j++) {
+                                const tempsd = tempArray[j];
+                                if (tempsd.dataset.name == skiDiv.dataset.prev) {
+                                    var prevLevel = parseInt(tempsd.dataset.level)
+                                    if (prevLevel < prevMin) {
+                                        tempsd.dataset.level = prevMin
+                                        for (let t = 0; t < skillDivs.length; t++) {
+                                            const tski = skillDivs[t];
+                                            if (tski.dataset.id == tempsd.dataset.id) {
+                                                tski.dataset.level = prevMin
+                                                break
+                                            }
+                                        }
+                                    }
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            //前提职业也要搞定 
+            let already = []
+            for (let i = 0; i < proftreedivs.length; i++) {
+                const pt = proftreedivs[i];
+                const skiarr = pt.querySelectorAll(".skillIcon")
+                let need = false
+                for (let j = 0; j < skiarr.length; j++) {
+                    const ski = skiarr[j];
+                    if (ski.dataset.level != "0") {
+                        need = true
+                        break
+                    }
+                }
+                if (need) {
+                    if (pt.dataset.prev != "undefined" && already.indexOf(pt.dataset.prev) == -1) {
+                        for (let m = 0; m < proftreedivs.length; m++) {
+                            const prtr = proftreedivs[m];
+                            if (prtr.dataset.name == pt.dataset.prev) {
+                                if (prtr.dataset.min != "undefined") {
+                                    const skdis = prtr.querySelectorAll(".skillIcon")
+                                    let tempArray = skillSort(prtr)
+                                    while (calculateOneTree(prtr) < parseInt(prtr.dataset.min)) {
+                                        for (let n = tempArray.length - 1; n > 0; n--) {
+                                            const sdiv = tempArray[n]
+                                            const sdivlvl = parseInt(sdiv.dataset.level)
+                                            if (sdivlvl < parseInt(sdiv.dataset.max)) {
+                                                sdiv.dataset.level = sdivlvl + 1
+                                                break
+                                            }
+                                        }
+                                    }
+                                }
+
+                                break
+                            }
+                        }
+                        already.push(pt.dataset.prev)
+                    }
+                }
+            }
+
+            recalculate()
+        }
+
+        function calculateOneTree(prof) {
+            const sds = prof.querySelectorAll(".skillIcon")
+            let used = 0
+            for (let j = 0; j < sds.length; j++) {
+                const skiDiv = sds[j];
+                skiDiv.querySelector("span").innerHTML = skiDiv.dataset.level
+                const level = parseInt(skiDiv.dataset.level)
+                if (level > 0) {
+                    used += parseInt(skiDiv.dataset.reqNum) + level - 1
+                }
+            }
+            prof.querySelector(".profTitle").querySelector("span").innerHTML = used
+            return used
+        }
+
+        function recalculate() {
+            var proftreedivs = document.querySelectorAll(".profTree")
+            usedSkillNumber = 0
+            for (let i = 0; i < proftreedivs.length; i++) {
+                const prof = proftreedivs[i];
+                let used = calculateOneTree(prof)
+
+                usedSkillNumber += used
+            }
+            changeLevel(0)
+        }
+
+        function skillClicked(e) {
+            var skiDiv = e.currentTarget
+            var leftSpan = document.querySelector("#leftSpan")
+            var leftNumber = parseInt(leftSpan.innerHTML)
+            if (leftNumber <= 0)
+                return
+
+            var skilvl = parseInt(skiDiv.dataset.level)
+            var reqlvl = parseInt(skiDiv.dataset.reqLvl.split(",")[skilvl])
+            var pl = parseInt(document.querySelector("#levelSpan").innerHTML)
+            if (reqlvl > pl)
+                return
+
+            var max = parseInt(skiDiv.dataset.max)
+            if (skilvl == max) {
+                return
+            } else {
+                skiDiv.dataset.level = skilvl + 1
+            }
+
+            plusCalculate()
+            refreshSkillDesc(skiDiv)
+        }
+
+        function skillContextMenu(e) {
+            var skiDiv = e.currentTarget
+            if (skiDiv.dataset.level == "0") {
+                return
+            }
+            skiDiv.dataset.level = parseInt(skiDiv.dataset.level) - 1
+
+            const proftree = skiDiv.parentElement
+            const skillDivs = skillSort(proftree)
+            for (let i = skillDivs.length - 1; i > 0; i--) {
+                const sd = skillDivs[i];
+                for (let j = 0; j < skillDivs.length; j++) {
+                    const afsd = skillDivs[j];
+                    if (afsd.dataset.prev == sd.dataset.name) {
+                        if (parseInt(sd.dataset.level) < parseInt(afsd.dataset.prevMin)) {
+                            afsd.dataset.level = "0"
+                        }
+                    }
+                }
+            }
+
+            let proftreedivs = document.querySelectorAll(".profTree")
+            for (let i = proftreedivs.length - 1; i > 0; i--) {
+                const pt = proftreedivs[i];
+                const used = calculateOneTree(pt)
+                if (pt.dataset.min != "undefined" && used < parseInt(pt.dataset.min)) {
+                    for (let j = 0; j < proftreedivs.length; j++) {
+                        const afpt = proftreedivs[j];
+                        if (afpt.dataset.prev == pt.dataset.name) {
+                            const afsds = afpt.querySelectorAll(".skillIcon")
+                            for (let x = 0; x < afsds.length; x++) {
+                                const afsd = afsds[x];
+                                afsd.dataset.level = 0
+                            }
+                        }
+                    }
+                }
+            }
+
+            recalculate()
+            refreshSkillDesc(skiDiv)
+        }
+
+        var mouseX = 0, mouseY = 0
+        function refreshSkillDesc(skiDiv) {
+            var skilvl = 0
+            if (skiDiv.dataset.level)
+                skilvl = parseInt(skiDiv.dataset.level)
+
+            var max = parseInt(skiDiv.dataset.max)
+
+            var changeColor = function (s) {
+                let t = s.replace(/#r/g, "<br/>")
+
+                let a = t.split("#")
+                t = ""
+                for (let i = 0; i < a.length; i++) {
+                    let ts = a[i];
+                    for (let j = 0; j < colorData.length; j++) {
+                        const c = colorData[j];
+                        if (ts[0] == c.id) {
+                            ts = ts.substr(1)
+                            ts = "<span style='color:#" + c.color + "'>" + ts + "</span>"
+                            break
+                        }
+                    }
+                    t += ts
+                }
+                return t
+            }
+
+            var str = changeColor(skiDiv.dataset.str1).replace("%s", "&nbsp;" + skilvl)
+
+            var replaceSpec = function (s, l) {
+                if (skiDiv.dataset.ext) {
+                    let a = skiDiv.dataset.ext.split("|")
+                    for (let i = 0; i < a.length; i++) {
+                        const ts = a[i];
+                        var reg = /%d/
+                        if (ts.indexOf(".") != -1)
+                            reg = /%\.1f/
+
+                        let ta = ts.split(",")
+                        s = s.replace(reg, ta[l - 1])
+                    }
+                }
+                return s
+            }
+
+            if (skilvl != 0) {
+                str += "<br/>" + replaceSpec(changeColor(skiDiv.dataset.str2), skilvl)
+            }
+
+            if (skilvl != max) {
+                str += "<br/><span style='color:#ffffff'>下一级别：</span><br/>"
+                str += replaceSpec(changeColor(skiDiv.dataset.str2), skilvl + 1)
+            }
+
+            if (skilvl == 0) {
+                if (skiDiv.dataset.prev != "undefined") {
+                    str += "<br/><span style='color:#ffffff'>学习条件：<br/>人物等级达到%d级<br/>%s达到%d级<br/>需要技能点数%d点</span>".replace(/%d/, skiDiv.dataset.reqLvl.split(",")[skilvl]).replace(/%s/, skiDiv.dataset.prev).replace(/%d/, skiDiv.dataset.prevMin).replace(/%d/, skiDiv.dataset.reqNum);
+                } else {
+                    str += "<br/><span style='color:#ffffff'>学习条件：<br/>人物等级达到%d级<br/>上一职业阶段总技能等级达到%d级<br/>需要技能点数%d点</span>".replace(/%d/, skiDiv.dataset.reqLvl.split(",")[0]).replace(/%d/, skiDiv.dataset.prevMin).replace(/%d/, skiDiv.dataset.reqNum);
+                }
+            } else if (skilvl == max) {
+            } else {
+                str += "<br/><span style='color:#ffffff'>学习条件：<br/>人物等级达到%d级<br/>需要技能点数1点</span>".replace(/%d/, skiDiv.dataset.reqLvl.split(",")[parseInt(skiDiv.dataset.level)]);
+            }
+
+            var descDiv = document.querySelector("#descDiv")
+            descDiv.innerHTML = str.replace(/<br\/><br\/>/g, "<br/>")
+            descDiv.style.display = "block"
+            var windowWidth = window.innerWidth, windowHeight = window.innerHeight,
+                descWidth = descDiv.clientWidth, descHeight = descDiv.clientHeight
+
+            if (mouseX + descWidth + 30 > windowWidth) {
+                descDiv.style.marginLeft = (mouseX - descWidth - 30) + "px"
+            } else {
+                descDiv.style.marginLeft = mouseX + "px"
+            }
+
+            if (mouseY + descHeight + 30 > windowHeight) {
+                if (descHeight > windowHeight) {
+                    descDiv.style.marginTop = "0px"
+                } else {
+                    descDiv.style.marginTop = (windowHeight - descHeight - 50) + "px"
+                }
+            } else {
+                descDiv.style.marginTop = mouseY + "px"
+            }
+        }
+
+        function skillMouseOver(e) {
+            var skiDiv = e.currentTarget
+            mouseX = e.clientX
+            mouseY = e.clientY
+            refreshSkillDesc(skiDiv)
+        }
+
+        function skillMouseOut() {
+            var descDiv = document.querySelector("#descDiv")
+            descDiv.style.display = "none"
+        }
+
+        function showProfGroup(profName) {
+            var prof_ms = ""
+            for (let i = 0; i < profRela.length; i++) {
+                const rela = profRela[i];
+                if (rela.name == profName) {
+                    prof_ms = rela.prev
+                    break
+                }
+            }
+            currentProfs = ""
+            if (prof_ms != "") {
+                for (let i = 0; i < profRela.length; i++) {
+                    const rela = profRela[i];
+                    if (rela.prev == prof_ms) {
+                        currentProfs += rela.name + ","
+                    }
+                }
+                while (prof_ms != undefined) {
+                    currentProfs += prof_ms + ","
+                    for (let i = 0; i < profRela.length; i++) {
+                        const rela = profRela[i];
+                        if (rela.name == prof_ms) {
+                            prof_ms = rela.prev
+                            break
+                        }
+                    }
+                }
+                currentProfs = currentProfs.substr(0, currentProfs.length - 1)
+
+                var createAlgoArray = function (a, m) {
+                    if (a.length != m) {
+                        if (a.length == 1)
+                            a.push("1")
+
+                        let plus = parseFloat(a[1])
+                        let start = parseFloat(a[0])
+                        for (let i = 1; i < m; i++) {
+                            const r = Math.round((start + plus * i) * 100) / 100 //js有bug，有时会出现不应该出现的小数
+                            a.splice(i, 1, r)
+                        }
+                    }
+                    return a
+                }
+
+                const arr = currentProfs.split(",")
+                //下面要按currentProfs里职业的顺序生成职业树
+                var contDiv = document.querySelector("#contentDiv")
+                contDiv.innerHTML = ""
+                for (let i = 0; i < arr.length; i++) {
+                    const cpname = arr[i];
+                    for (let j = 0; j < profData.length; j++) {
+                        const pd = profData[j];
+                        if (cpname == pd.name) {
+                            //根据pd里的skill数据生成树的样子
+                            const profDiv = document.createElement("div")
+                            profDiv.className = "profTree"
+                            profDiv.dataset.name = pd.name
+                            for (let x = 0; x < profRela.length; x++) {
+                                const re = profRela[x];
+                                if (re.name == pd.name) {
+                                    profDiv.dataset.min = re.min
+                                    profDiv.dataset.prev = re.prev
+                                    break
+                                }
+                            }
+
+                            contDiv.appendChild(profDiv)
+                            const proftitleDiv = document.createElement("div")
+                            proftitleDiv.innerHTML = pd.name
+                            proftitleDiv.className = "profTitle"
+                            profDiv.appendChild(proftitleDiv)
+
+                            const addedNumSpan = document.createElement("span")
+                            addedNumSpan.innerHTML = "0"
+                            proftitleDiv.appendChild(addedNumSpan)
+
+                            var prof_max_x = 0;
+                            var prof_max_y = 0;
+
+                            for (let k = 0; k < pd.skill.length; k++) {
+                                const ski = pd.skill[k];
+                                const skiDiv = document.createElement("div")
+                                skiDiv.className = "skillIcon"
+                                profDiv.appendChild(skiDiv)
+
+                                skiDiv.dataset.id = ski.id
+                                skiDiv.dataset.max = ski.max
+                                skiDiv.dataset.prof = pd.name
+                                for (let t = 0; t < skillstrData.length; t++) {
+                                    const skillstr = skillstrData[t];
+                                    if (skillstr.id == ski.id) {
+                                        skiDiv.dataset.name = skillstr.str[0]
+                                        skiDiv.dataset.str1 = skillstr.str[1]
+                                        skiDiv.dataset.str2 = skillstr.str[2]
+                                        break
+                                    }
+                                }
+
+                                skiDiv.dataset.x = ski.x
+                                for (let t = 0; t < skillrela.length; t++) {
+                                    const rela = skillrela[t];
+                                    if (rela.name == skiDiv.dataset.name && (rela.prof == pd.name || rela.prof == undefined)) {
+                                        if (rela.reqLvl == "130") {
+                                            skiDiv.dataset.y = ski.y - 20
+                                        } else if (rela.reqLvl == "140") {
+                                            skiDiv.dataset.y = ski.y - 40
+                                        } else {
+                                            skiDiv.dataset.y = ski.y
+                                        }
+
+                                        skiDiv.dataset.prev = rela.prev
+                                        skiDiv.dataset.reqLvl = createAlgoArray(rela.reqLvl.split(","), ski.max)
+                                        if (rela.reqNum != undefined) {
+                                            skiDiv.dataset.reqNum = rela.reqNum
+                                        } else {
+                                            skiDiv.dataset.reqNum = "1"
+                                        }
+                                        if (rela.prevMin != undefined) {
+                                            skiDiv.dataset.prevMin = rela.prevMin
+                                        } else {
+                                            skiDiv.dataset.prevMin = "1"
+                                        }
+
+                                        if (rela.ext) {
+                                            let r = ""
+                                            let temparray = rela.ext.split("|")
+                                            for (let x = 0; x < temparray.length; x++) {
+                                                const tempStr = temparray[x];
+                                                r += createAlgoArray(tempStr.split(","), ski.max)
+                                                if (x < temparray.length - 1) {
+                                                    r += "|"
+                                                }
+                                            }
+                                            skiDiv.dataset.ext = r
+                                        }
+
+                                        break
+                                    }
+                                }
+                                prof_max_x = Math.max(prof_max_x, skiDiv.dataset.x)
+                                prof_max_y = Math.max(prof_max_y, skiDiv.dataset.y)
+
+                                skiDiv.style.marginLeft = skiDiv.dataset.x + "px"
+                                skiDiv.style.marginTop = skiDiv.dataset.y + "px"
+
+                                //找出image放到背景里
+                                for (let l = 0; l < imageData.length; l++) {
+                                    const id = imageData[l];
+                                    if (id.id == ski.id) {
+                                        skiDiv.style.backgroundImage = "url(" + pngPrevStr + id.data + ")"
+                                        break
+                                    }
+                                }
+
+                                //加入已加技能点数
+                                const ns = document.createElement("span")
+                                let found = false
+                                for (let x = 0; x < skillReco.length; x++) {
+                                    const reco = skillReco[x];
+                                    if (reco.name == skiDiv.dataset.name) {
+                                        found = true
+                                        if (reco.reco > ski.max) {
+                                            ns.innerHTML = ski.max
+                                        } else {
+                                            ns.innerHTML = reco.reco
+                                        }
+                                        break
+                                    }
+                                }
+                                if (!found) {
+                                    ns.innerHTML = "0"
+                                }
+                                skiDiv.dataset.level = ns.innerHTML
+                                skiDiv.appendChild(ns)
+
+                                skiDiv.addEventListener("click", skillClicked)
+                                skiDiv.addEventListener("mouseover", skillMouseOver)
+                                skiDiv.addEventListener("mouseout", skillMouseOut)
+                                skiDiv.addEventListener("contextmenu", skillContextMenu)
+                            }
+
+                            profDiv.style.width = prof_max_x + 55 + "px"
+                            profDiv.style.height = prof_max_y + 80 + "px"
+
+                            break
+                        }
+                    }
+                }
+
+                //根据skillrelationship.js里的技能上下关系划线
+                var skiDivs = document.querySelectorAll(".skillIcon")
+                for (let m = 0; m < skiDivs.length; m++) {
+                    const toSkiDiv = skiDivs[m];
+                    for (let n = 0; n < skiDivs.length; n++) {
+                        const fromSkiDiv = skiDivs[n];
+                        if (fromSkiDiv.dataset.name == toSkiDiv.dataset.prev) {
+                            var lineDiv = createLine(fromSkiDiv.dataset.x, fromSkiDiv.dataset.y, toSkiDiv.dataset.x, toSkiDiv.dataset.y)
+                            fromSkiDiv.parentElement.appendChild(lineDiv)
+
+                            break
+                        }
+                    }
+                }
+            }
+            plusCalculate()
+            hideMenuDiv()
+        }
+
+        function profClicked(e) {
+            var target = e.target
+            var profName = target["title"]
+            if (currentProfs != "") {
+                if (currentProfs.indexOf(profName) == -1) {
+                    if (confirm("要更换职业吗？")) {
+                        showProfGroup(profName)
+                    }
+                }
+            } else {
+                showProfGroup(profName)
+            }
+        }
+
+        function windowLoad() {
+            /**开始遍历并显示职业图标，用于选择**/
+            var profDiv = document.querySelector("#profIconDiv")
+            for (let i = 0; i < profRela.length; i++) {
+                const rela = profRela[i]
+                if (rela.ms != undefined) {
+                    const profNames = []
+                    for (let j = 0; j < profRela.length; j++) {
+                        const tempRela = profRela[j];
+                        if (tempRela.prev == rela.name) {
+                            profNames.push(tempRela.name)
+                        }
+                    }
+
+                    const groupSpan = document.createElement("span")
+                    groupSpan.className = "profGroup"
+                    profDiv.appendChild(groupSpan)
+
+                    for (let j = 0; j < profNames.length; j++) {
+                        const pname = profNames[j]
+                        const img = document.createElement("img")
+                        img.title = pname
+                        img.addEventListener("click", profClicked)
+                        groupSpan.appendChild(img);
+                        for (let k = 0; k < profData.length; k++) {
+                            const prof = profData[k]
+                            if (prof.name == pname) {
+                                for (let l = 0; l < imageData.length; l++) {
+                                    const imgData = imageData[l]
+                                    if (imgData.id == "Pro" + prof.id) {
+                                        img.src = pngPrevStr + imgData.data
+                                        break
+                                    } else if (imgData.id == prof.name) {
+                                        img.src = pngPrevStr + imgData.data
+                                        break
+                                    } else if (imgData.id == prof.image) {
+                                        img.src = pngPrevStr + imgData.data
+                                        break
+                                    }
+                                }
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+            //在profrelationship.js里设定的职业都显示了，下面主要用来查检没有用到的职业（profrelationship.js里不设置，显示出来没意义）
+            var notUsedProfs = []
+            for (let i = 0; i < profData.length; i++) {
+                const prof = profData[i]
+                var found = false
+                for (let j = 0; j < profRela.length; j++) {
+                    const rela = profRela[j]
+                    if (rela.name == prof.name) {
+                        found = true
+                        break
+                    }
+                }
+                if (!found) {
+                    notUsedProfs.push(prof)
+                }
+            }
+            if (notUsedProfs.length > 0) {
+                const notUsedDiv = document.createElement("span")
+                notUsedDiv.className = "profGroup"
+                profDiv.appendChild(notUsedDiv)
+                var txt = "没有用到的职业<br/>"
+                for (let i = 0; i < notUsedProfs.length; i++) {
+                    const nup = notUsedProfs[i];
+                    txt += nup.name + "<br/>"
+                }
+                notUsedDiv.innerHTML = txt;
+            }
+            //notused end
+        }
+        window.onload = windowLoad
+    </script>
+</head>
+
+<body>
+    <div id="titleDiv" oncontextmenu="changeLevel(-1);return false" onclick="changeLevel(1)" title="左右单击会加减等级">等级：
+        <span class="number" id="levelSpan">150</span>剩余技能点：
+        <span class="number" id="leftSpan">190</span>
+    </div>
+
+    <div id="menuDiv" onmouseover="showMenuDiv()" onclick="hideMenuDiv()">
+        <!-- <div> 我发现现在职业树都float起来挺好，不用这些功能也挺好看，所以不开发这两个功能了，浪费时间
+            <input type="checkbox" id="onlyThird" />
+            <span class="needPointer" onclick="changeCheckbox('onlyThird')">只显示三转</span>
+        </div>
+
+        <div>
+            <input type="checkbox" id="autoHeight" />
+            <span class="needPointer" onclick="changeCheckbox('autoHeight')">自适应高度</span>
+        </div> -->
+
+        <div id="profIconDiv"></div>
+    </div>
+
+    <div id="contentDiv" oncontextmenu="return false"></div>
+    <div id="descDiv"></div>
+</body>
+
+</html>
